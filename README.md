@@ -9,4 +9,6 @@ Wireshark Dissector for the [HEP](http://hep.sipcapture.org) Encapsulation Proto
 
 See lua/README.md.
 
+<img src="http://i.imgur.com/DgQOwEJ.png" />
+
 
