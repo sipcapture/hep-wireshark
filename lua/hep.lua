@@ -160,6 +160,8 @@ function process_protocol_type(buffer, offset, subtree)
     info = "SIP"
   elseif (tostring(data) == "05") then -- 5
     info = "JSON/RTCP"
+  elseif (tostring(data) == "14") then -- 14
+    info = "JSON/webRTC"
   elseif (tostring(data) == "20") then -- 32
     info = "JSON/QOS"
   elseif (tostring(data) == "63") then -- 99
