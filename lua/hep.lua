@@ -55,8 +55,10 @@ fds3.length = ProtoField.new("Length (Bytes)", "hep3.length", ftypes.UINT16)
 fds3.protocol_family = ProtoField.new("Protocol family", "hep3.protocol_family", ftypes.STRING)
 fds3.protocol_id = ProtoField.new("Protocol ID", "hep3.protocol_id", ftypes.STRING)
 fds3.protocol_type = ProtoField.new("Protocol Type", "hep3.protocol_type", ftypes.STRING)
-fds3.src_ip_address = ProtoField.new("Source IP address", "hep3.src_ip_address", ftypes.IPv4)
-fds3.dst_ip_address = ProtoField.new("Destination IP address", "hep3.dst_ip_address", ftypes.IPv4)
+fds3.src_ipv4_address = ProtoField.new("Source IPv4 address", "hep3.src_ipv4_address", ftypes.IPv4)
+fds3.dst_ipv4_address = ProtoField.new("Destination IPv4 address", "hep3.dst_ipv4_address", ftypes.IPv4)
+fds3.dst_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.dst_ipv6_address", ftypes.STRING)
+fds3.src_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.src_ipv6_address", ftypes.STRING)
 fds3.src_port = ProtoField.new("Source port", "hep3.src_port", ftypes.UINT16)
 fds3.dst_port = ProtoField.new("Destination port", "hep3.dst_port", ftypes.UINT16)
 fds3.timestamp = ProtoField.new("Timestamp", "hep3.timestamp", ftypes.UINT32)
@@ -65,9 +67,6 @@ fds3.capture_id = ProtoField.new("Capture ID", "hep3.capture_id", ftypes.UINT32)
 fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
 fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
 fds3.payload = ProtoField.new("Payload", "hep3.payload", ftypes.STRING)
-
-
-
 
 
 --------------------------------------------------------------------------------
@@ -91,6 +90,8 @@ function process_proto_family(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)
   if tostring(data) == "02" then
     info = "IPv4"
+  elseif tostring(data) == "0a" then
+    info = "IPv6"
   else
     info = "Unknown"
   end
@@ -111,17 +112,49 @@ function process_proto_id(buffer, offset, subtree)
   return offset + len
 end
 
-function process_src_ip4_address(buffer, offset, subtree)
+function process_src_ipv4_address(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
   info = data:ipv4()
-  subtree:add(fds3.src_ip_address, buffer(offset, len), info)
+  subtree:add(fds3.src_ipv4_address, buffer(offset, len), info)
   return offset + len
 end
 
-function process_dst_ip4_address(buffer, offset, subtree)
+function process_dst_ipv4_address(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
   info = data:ipv4()
-  subtree:add(fds3.dst_ip_address, buffer(offset, len), info)
+  subtree:add(fds3.dst_ipv4_address, buffer(offset, len), info)
+  return offset + len
+end
+
+function decompose_ipv6(data)
+  local data = tostring(data)
+  local i = 1
+  local ret = string.sub(data, i, i+3)
+  for j=0, 6, 1
+  do
+    i = i + 4
+    ret = ret .. ":" .. string.sub(data, i, i+3)
+  end
+  ret = string.gsub(ret, ":0000", ":")
+  ret = string.gsub(ret, ":000", ":")
+  ret = string.gsub(ret, ":00", ":")
+  ret = string.gsub(ret, ":0", ":")
+  ret = string.gsub(ret, "::::", "::")
+  ret = string.gsub(ret, ":::", "::")
+  return ret
+end
+
+function process_src_ipv6_address(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)
+  local info = decompose_ipv6(data)
+  subtree:add(fds3.src_ipv6_address, buffer(offset, len), tostring(info))
+  return offset + len
+end
+
+function process_dst_ipv6_address(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)
+  local info = decompose_ipv6(data)
+  subtree:add(fds3.dst_ipv6_address, buffer(offset, len), tostring(info))
   return offset + len
 end
 
@@ -315,13 +348,13 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
     elseif chunk_type == "00000002" then
       offset = process_proto_id(buffer, offset, subtree)
     elseif chunk_type == "00000003" then
-      offset = process_src_ip4_address(buffer, offset, subtree)
+      offset = process_src_ipv4_address(buffer, offset, subtree)
     elseif chunk_type == "00000004" then
-      offset = process_dst_ip4_address(buffer, offset, subtree)
+      offset = process_dst_ipv4_address(buffer, offset, subtree)
     elseif chunk_type == "00000005" then
-      -- IPv6 source address TODO
+      offset = process_src_ipv6_address(buffer, offset, subtree)
     elseif chunk_type == "00000006" then
-      -- IPv6 destination address TODO
+      offset = process_dst_ipv6_address(buffer, offset, subtree)
     elseif chunk_type == "00000007" then
       offset = process_src_port(buffer, offset, subtree)
     elseif chunk_type == "00000008" then
