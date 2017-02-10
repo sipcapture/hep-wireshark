@@ -1,6 +1,7 @@
 --
 -- Copyright 2016 (C) Giacomo Vacca <giacomo.vacca@gmail.com>
 -- Copyright 2016 (C) Federico Cabiddu <federico.cabiddu@gmail.com>
+-- Copyright 2017 (C) Alexandr Dubovikov <alexandr.dubovikov@gmail.com>
 --
 --
 -- This file is free software; you can redistribute it and/or modify
@@ -233,6 +234,11 @@ function process_correlation_id(buffer, offset, subtree)
   return offset + len
 end
 
+function process_unknown_chunk(buffer, offset)
+  data, offset, len = get_data(buffer, offset)
+  return offset + len
+end
+
 function process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
   data, offset, len = get_data(buffer, offset)
   info = data:string()
@@ -377,10 +383,13 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       offset = process_correlation_id(buffer, offset, subtree)
     elseif chunk_type == "00000012" then
       -- VLAN ID TODO
-    elseif chunk_type == "00000013" then
+      offset = process_unknown_chunk(buffer, offset)            
+    elseif chunk_type == "00000013" then    
       -- Group ID TODO
+      offset = process_unknown_chunk(buffer, offset)            
     else
       -- something not quite right
+      offset = process_unknown_chunk(buffer, offset)            
     end
 
     if (offset < (total_len - 1)) then

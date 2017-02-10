@@ -26,6 +26,8 @@ FOUROCTETS = 4
 TWOOCTETS = 2
 ONEOCTET = 1
 
+
+local d = require 'debug'
 eep3_proto = Proto("eep3", "EEP3 Protocol")
 
 eep3_proto.fields = {}
@@ -166,6 +168,11 @@ function process_timestamp_us(buffer, offset, subtree)
   return offset + len
 end
 
+function process_unknown_chunk(buffer, offset)
+  data, offset, len = get_data(buffer, offset)  
+  return offset + len
+end
+
 function process_protocol_type(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)
     
@@ -278,12 +285,9 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
       -- Compressed payload TODO
     elseif chunk_type == "00000011" then
       offset = process_correlation_id(buffer, offset, subtree)
-    elseif chunk_type == "00000012" then
-      -- VLAN ID TODO
-    elseif chunk_type == "00000013" then
-      -- Group ID TODO
     else
       -- something not quite right
+      offset = process_unknown_chunk(buffer, offset)
     end
 
     if (offset < (total_len - 1)) then
@@ -292,10 +296,22 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
   end -- while
 end
 
-function eep3_proto.dissector(buffer, pinfo, tree)
-  offset = 0  
+function eep3_proto_dissector(buffer, pinfo, tree)
   local subtree = tree:add(eep3_proto, buffer(), "EEP3 Protocol")
   dissect_eep3(buffer, offset, subtree, pinfo, tree)
+end
+
+function eep3_proto.dissector(buffer, pinfo, tree)
+  offset = 0
+  version = buffer(offset, FOUROCTETS):string()
+  print(d.traceback())
+
+  d.debug()
+
+  if (version == "EEP3") then
+    eep3_proto_dissector(buffer, pinfo, tree)
+    return
+  end
 end
 
 
