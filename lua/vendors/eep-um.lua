@@ -44,10 +44,20 @@ fds3.src_port = ProtoField.new("Source port", "eep3.src_port", ftypes.UINT16)
 fds3.dst_port = ProtoField.new("Destination port", "eep3.dst_port", ftypes.UINT16)
 fds3.timestamp = ProtoField.new("Timestamp", "eep3.timestamp", ftypes.UINT32)
 fds3.timestamp_us = ProtoField.new("Timestamp us", "eep3.timestamp_us", ftypes.UINT32)
-fds3.capture_id = ProtoField.new("Capture ID", "eep3.capture_id", ftypes.UINT32)
-fds3.auth_key = ProtoField.new("Authentication Key", "eep3.auth_key", ftypes.STRING)
-fds3.correlation_id = ProtoField.new("Correlation ID", "eep3.correlation_id", ftypes.STRING)
+
+--------------------------------------------------------------------------------
+fds3.network_element_id = ProtoField.new("Network Element ID", "eep3.network_element_id", ftypes.UINT32)
+fds3.location = ProtoField.new("Location", "eep3.location", ftypes.STRING)
+fds3.record_type = ProtoField.new("Record Type", "eep3.record_type", ftypes.UINT8)
 fds3.payload = ProtoField.new("Payload", "eep3.payload", ftypes.STRING)
+fds3.network_operator_id = ProtoField.new("Network operator", "eep3.network_operator_id", ftypes.STRING)
+fds3.direction_int = ProtoField.new("Direction Interception", "eep3.direction_int", ftypes.UINT8)
+fds3.direction_pr = ProtoField.new("Direction Session", "eep3.direction_pr", ftypes.UINT8)
+fds3.liid = ProtoField.new("LIID", "eep3.liid", ftypes.UINT32)
+fds3.cid = ProtoField.new("CID", "eep3.cid", ftypes.UINT32)
+fds3.seqnum = ProtoField.new("Sequence Number", "eep3.seqnum", ftypes.UINT32)
+fds3.node_type = ProtoField.new("Node Type", "eep3.node_type", ftypes.UINT8)
+fds3.data_type = ProtoField.new("Data Type", "eep3.data_type", ftypes.UINT16)
 
 
 --------------------------------------------------------------------------------
@@ -200,26 +210,83 @@ function process_protocol_type(buffer, offset, subtree)
   return next_offset, info
 end
 
-function process_capture_id(buffer, offset, subtree)
+function process_network_element_id(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
   info = data:uint()
-  subtree:add(fds3.capture_id, buffer(offset, len), info)
+  subtree:add(fds3.network_element_id, buffer(offset, len), info)
   return offset + len
 end
 
-function process_auth_key(buffer, offset, subtree)
-  data, offset, len = get_data(buffer, offset)
+function process_location(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
   info = data:string()
-  subtree:add(fds3.auth_key, buffer(offset, len), info)
+  subtree:add(fds3.location, buffer(offset, len), info)
   return offset + len
 end
 
-function process_correlation_id(buffer, offset, subtree)
-  data, offset, len = get_data(buffer, offset)
-  info = data:string()
-  subtree:add(fds3.correlation_id, buffer(offset, len), info)
+function process_record_type(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.record_type, buffer(offset, len), info)
   return offset + len
 end
+
+function process_network_operator_id(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:string()
+  subtree:add(fds3.network_operator_id, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_direction_int(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.direction_int, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_direction_pr(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.direction_pr, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_liid(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.liid, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_cid(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.cid, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_seqnum(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.seqnum, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_node_type(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.node_type, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_data_type(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.data_type, buffer(offset, len), info)
+  return offset + len
+end
+
 
 function process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
   data, offset, len = get_data(buffer, offset)
@@ -279,15 +346,29 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
     elseif chunk_type == "0009000b" then
       offset, protocol_type = process_protocol_type(buffer, offset, subtree)
     elseif chunk_type == "0009000c" then
-      offset = process_capture_id(buffer, offset, subtree)
+      offset = process_network_element_id(buffer, offset, subtree)
+    elseif chunk_type == "0009000d" then
+      offset = process_location(buffer, offset, subtree)         
     elseif chunk_type == "0009000e" then
-      offset = process_auth_key(buffer, offset, subtree)
+      offset = process_record_type(buffer, offset, subtree)
     elseif chunk_type == "0009000f" then
       offset = process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
-    elseif chunk_type == "00090010" then
-      -- Compressed payload TODO
     elseif chunk_type == "00090011" then
-      offset = process_correlation_id(buffer, offset, subtree)
+      offset = process_network_operator_id(buffer, offset, subtree)      
+    elseif chunk_type == "00090012" then
+      offset = process_direction_int(buffer, offset, subtree)
+    elseif chunk_type == "00090013" then
+      offset = process_direction_pr(buffer, offset, subtree)
+    elseif chunk_type == "00090014" then
+      offset = process_liid(buffer, offset, subtree)
+    elseif chunk_type == "00090015" then
+      offset = process_cid(buffer, offset, subtree)
+    elseif chunk_type == "00090016" then
+      offset = process_seqnum(buffer, offset, subtree)
+    elseif chunk_type == "00090017" then
+      offset = process_node_type(buffer, offset, subtree)
+    elseif chunk_type == "00090018" then
+      offset = process_data_type(buffer, offset, subtree)
     else
       -- something not quite right
       if (offset < (total_len - 1)) then
