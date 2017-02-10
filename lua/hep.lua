@@ -381,15 +381,11 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       -- Compressed payload TODO
     elseif chunk_type == "00000011" then
       offset = process_correlation_id(buffer, offset, subtree)
-    elseif chunk_type == "00000012" then
-      -- VLAN ID TODO
-      offset = process_unknown_chunk(buffer, offset)            
-    elseif chunk_type == "00000013" then    
-      -- Group ID TODO
-      offset = process_unknown_chunk(buffer, offset)            
     else
-      -- something not quite right
-      offset = process_unknown_chunk(buffer, offset)            
+      -- procced unknown chunk
+        if (offset < (total_len - 1)) then
+		offset = process_unknown_chunk(buffer, offset)
+        end                              
     end
 
     if (offset < (total_len - 1)) then

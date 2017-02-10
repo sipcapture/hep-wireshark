@@ -27,7 +27,6 @@ TWOOCTETS = 2
 ONEOCTET = 1
 
 
-local d = require 'debug'
 eep3_proto = Proto("eep3", "EEP3 Protocol")
 
 eep3_proto.fields = {}
@@ -53,6 +52,8 @@ fds3.payload = ProtoField.new("Payload", "eep3.payload", ftypes.STRING)
 
 --------------------------------------------------------------------------------
 function get_chunk_type(buffer, offset)
+  debug("CHUNK GET1:"..offset)
+  debug("CHUNK GET2:"..FOUROCTETS)
   return tostring(buffer(offset, FOUROCTETS))
 end
 
@@ -248,47 +249,54 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
   
   total_len = buffer(offset, TWOOCTETS):uint()
   subtree:add(fds3.length, buffer(offset, TWOOCTETS), total_len)
+  
+  debug("TOTAL LEN:" .. total_len)
 
   offset = offset + TWOOCTETS
   chunk_type = get_chunk_type(buffer, offset)
   
   while (offset < (total_len -1)) do
-    if chunk_type == "00000001" then
+    if chunk_type == "00090001" then
       offset = process_proto_family(buffer, offset, subtree)
-    elseif chunk_type == "00000002" then
+    elseif chunk_type == "00090002" then
       offset = process_proto_id(buffer, offset, subtree)
-    elseif chunk_type == "00000003" then
+    elseif chunk_type == "00090003" then
       offset = process_src_ipv4_address(buffer, offset, subtree)
-    elseif chunk_type == "00000004" then
+    elseif chunk_type == "00090004" then
       offset = process_dst_ipv4_address(buffer, offset, subtree)
-    elseif chunk_type == "00000005" then
+    elseif chunk_type == "00090005" then
       offset = process_src_ipv6_address(buffer, offset, subtree)
-    elseif chunk_type == "00000006" then
+    elseif chunk_type == "00090006" then
       offset = process_dst_ipv6_address(buffer, offset, subtree)
-    elseif chunk_type == "00000007" then
+    elseif chunk_type == "00090007" then
       offset = process_src_port(buffer, offset, subtree)
-    elseif chunk_type == "00000008" then
+    elseif chunk_type == "00090008" then
       offset = process_dst_port(buffer, offset, subtree)
-    elseif chunk_type == "00000009" then
+    elseif chunk_type == "00090009" then
       offset = process_timestamp(buffer, offset, subtree)
-    elseif chunk_type == "0000000a" then
+    elseif chunk_type == "0009000a" then
       offset = process_timestamp_us(buffer, offset, subtree)
-    elseif chunk_type == "0000000b" then
+    elseif chunk_type == "0009000b" then
       offset, protocol_type = process_protocol_type(buffer, offset, subtree)
-    elseif chunk_type == "0000000c" then
+    elseif chunk_type == "0009000c" then
       offset = process_capture_id(buffer, offset, subtree)
-    elseif chunk_type == "0000000e" then
+    elseif chunk_type == "0009000e" then
       offset = process_auth_key(buffer, offset, subtree)
-    elseif chunk_type == "0000000f" then
+    elseif chunk_type == "0009000f" then
       offset = process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
-    elseif chunk_type == "00000010" then
+    elseif chunk_type == "00090010" then
       -- Compressed payload TODO
-    elseif chunk_type == "00000011" then
+    elseif chunk_type == "00090011" then
       offset = process_correlation_id(buffer, offset, subtree)
     else
       -- something not quite right
-      offset = process_unknown_chunk(buffer, offset)
+      if (offset < (total_len - 1)) then
+      		offset = process_unknown_chunk(buffer, offset)
+      end
     end
+
+     -- debug("chunk_type:" .. chunk_type)
+     -- debug("offset:" .. offset)
 
     if (offset < (total_len - 1)) then
       chunk_type = get_chunk_type(buffer, offset)
@@ -304,10 +312,10 @@ end
 function eep3_proto.dissector(buffer, pinfo, tree)
   offset = 0
   version = buffer(offset, FOUROCTETS):string()
-  print(d.traceback())
 
-  d.debug()
-
+  local size = buffer:len()  
+  debug("REAL LEN:" .. size)
+  
   if (version == "EEP3") then
     eep3_proto_dissector(buffer, pinfo, tree)
     return
