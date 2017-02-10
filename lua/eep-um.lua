@@ -293,6 +293,7 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
 end
 
 function eep3_proto.dissector(buffer, pinfo, tree)
+  offset = 0  
   local subtree = tree:add(eep3_proto, buffer(), "EEP3 Protocol")
   dissect_eep3(buffer, offset, subtree, pinfo, tree)
 end
