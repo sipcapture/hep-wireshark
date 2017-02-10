@@ -292,11 +292,12 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
   end -- while
 end
 
-function eep3_proto_dissector(buffer, pinfo, tree)
+function eep3_proto.dissector(buffer, pinfo, tree)
   local subtree = tree:add(eep3_proto, buffer(), "EEP3 Protocol")
   dissect_eep3(buffer, offset, subtree, pinfo, tree)
 end
 
+
 --
-tcp_table = DissectorTable.get("udp.port")
+tcp_table = DissectorTable.get("tcp.port")
 tcp_table:add(9999, eep3_proto)
