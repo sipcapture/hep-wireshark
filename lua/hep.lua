@@ -202,6 +202,10 @@ function process_protocol_type(buffer, offset, subtree)
     info = "JSON/QOS"
   elseif (tostring(data) == "64") then -- 100
     info = "LOG"
+  elseif (tostring(data) == "08") then -- 8
+    info = "M2UA"
+  elseif (tostring(data) == "0d") then -- 13
+    info = "M2PA"
   else
     info = "Unknown"
 -- TODO; add more protocol types
@@ -252,6 +256,12 @@ function process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
     pinfo.cols.protocol = "HEP3/" .. protocol_type
   elseif (protocol_type == "LOG") then
     pinfo.cols.protocol = "HEP3/" .. protocol_type
+  elseif (protocol_type == "M2UA") then
+    Dissector.get("m2ua"):call(buffer(offset):tvb(), pinfo, tree)
+    pinfo.cols.protocol = "HEP3/M2UA"
+  elseif (protocol_type == "M2PA") then
+    Dissector.get("m2pa"):call(buffer(offset):tvb(), pinfo, tree)
+    pinfo.cols.protocol = "HEP3/M2PA"
   else
     pinfo.cols.protocol = "HEP3"
   end
