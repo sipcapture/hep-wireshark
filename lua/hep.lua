@@ -206,7 +206,7 @@ function process_protocol_type(buffer, offset, subtree)
     info = "JSON/webRTC"
   elseif (tostring(data) == "20") then -- 32
     info = "JSON/QOS/32"
-  elseif (tostring(data) == "23") then -- 34
+  elseif (tostring(data) == "22") then -- 34
     info = "JSON/QOS/34"
   elseif (tostring(data) == "23") then -- 35
     info = "MOS"
