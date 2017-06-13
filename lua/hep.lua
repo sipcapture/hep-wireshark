@@ -62,6 +62,7 @@ fds3.dst_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.dst_ipv
 fds3.src_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.src_ipv6_address", ftypes.STRING)
 fds3.src_port = ProtoField.new("Source port", "hep3.src_port", ftypes.UINT16)
 fds3.dst_port = ProtoField.new("Destination port", "hep3.dst_port", ftypes.UINT16)
+fds3.mos = ProtoField.new("MOS", "hep3.mos", ftypes.UINT16)
 fds3.timestamp = ProtoField.new("Timestamp", "hep3.timestamp", ftypes.UINT32)
 fds3.timestamp_us = ProtoField.new("Timestamp us", "hep3.timestamp_us", ftypes.UINT32)
 fds3.capture_id = ProtoField.new("Capture ID", "hep3.capture_id", ftypes.UINT32)
@@ -170,6 +171,13 @@ function process_dst_port(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)
   info = data:uint()
   subtree:add(fds3.dst_port, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_mos(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)
+  info = data:uint()
+  subtree:add(fds3.mos, buffer(offset, len), info)
   return offset + len
 end
 
@@ -385,6 +393,8 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       -- Compressed payload TODO
     elseif chunk_type == "00000011" then
       offset = process_correlation_id(buffer, offset, subtree)
+    elseif chunk_type == "00000020" then
+      offset = process_mos(buffer, offset, subtree)			
     else
       -- procced unknown chunk
         if (offset < (total_len - 1)) then
