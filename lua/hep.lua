@@ -390,7 +390,9 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
     elseif chunk_type == "0000000f" then
       offset = process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
     elseif chunk_type == "00000010" then
-      -- Compressed payload TODO
+      -- compressed payload. Treat as normal payload
+      -- https://github.com/sipcapture/hep-wireshark/issues/5
+      offset = process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
     elseif chunk_type == "00000011" then
       offset = process_correlation_id(buffer, offset, subtree)
     elseif chunk_type == "00000020" then
