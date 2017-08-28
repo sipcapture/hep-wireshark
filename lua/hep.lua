@@ -200,6 +200,8 @@ function process_protocol_type(buffer, offset, subtree)
     
   if (tostring(data) == "01") then
     info = "SIP"
+  elseif (tostring(data) == "04") then
+    info = "RTP"
   elseif (tostring(data) == "05") then -- 5
     info = "JSON/RTCP"
   elseif (tostring(data) == "14") then -- 14
@@ -259,6 +261,9 @@ function process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
   if (protocol_type == "SIP") then
     Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
     pinfo.cols.protocol = "HEP3/SIP"
+  elseif (protocol_type == "RTP") then
+    Dissector.get("rtp"):call(buffer(offset):tvb(), pinfo, tree)
+    pinfo.cols.protocol = "HEP3/RTP"
   elseif ((protocol_type == "JSON") or (protocol_type == "JSON/RTCP") or (protocol_type == "JSON/QOS/32") or (protocol_type == "JSON/QOS/99") or (protocol_type == "MOS") or (protocol_type == "JSON/QOS/34")) then
     Dissector.get("json"):call(buffer(offset):tvb(), pinfo, tree)
     pinfo.cols.protocol = "HEP3/" .. protocol_type
