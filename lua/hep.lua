@@ -313,6 +313,9 @@ function dissect_hep2(buffer, offset, subtree, pinfo, tree)
     protocol_id = "UDP"
   elseif (tostring(protocol_id_buffer) == "06") then
     protocol_id = "TCP"
+  elseif (tostring(protocol_id_buffer) == "01") then
+    -- Fixes https://github.com/sipcapture/hep-wireshark/issues/4
+    protocol_id = "ICMP"
   else
     -- TODO: Add remaining
   end
