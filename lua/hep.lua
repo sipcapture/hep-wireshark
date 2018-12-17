@@ -457,3 +457,5 @@ end
 --
 udp_table = DissectorTable.get("udp.port")
 udp_table:add(9060, hep_proto)
+tcp_table = DissectorTable.get("tcp.port")
+tcp_table:add(9060, hep_proto)
