@@ -60,11 +60,18 @@ fds3.src_ipv4_address = ProtoField.new("Source IPv4 address", "hep3.src_ipv4_add
 fds3.dst_ipv4_address = ProtoField.new("Destination IPv4 address", "hep3.dst_ipv4_address", ftypes.IPv4)
 fds3.dst_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.dst_ipv6_address", ftypes.STRING)
 fds3.src_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.src_ipv6_address", ftypes.STRING)
+fds3.vlan_id = ProtoField.new("VLAN ID", "hep3.vlan_id", ftypes.UINT16)
+fds3.group_id = ProtoField.new("Group ID", "hep3.group_id", ftypes.STRING)
+fds3.source_mac = ProtoField.new("Source MAC address", "hep3.source_mac", ftypes.ETHER)
+fds3.destination_mac = ProtoField.new("Destination MAC address", "hep3.destination_mac", ftypes.ETHER)
+fds3.ethernet_type = ProtoField.new("Ethernet Type", "hep3.ethernet_type", ftypes.UINT16)
+fds3.ip_TOS = ProtoField.new("IP TOS", "hep3.ip_TOS", ftypes.UINT8)
+fds3.tcp_flags = ProtoField.new("TCP Flags", "hep3.tcp_flags", ftypes.UINT8)
 fds3.src_port = ProtoField.new("Source port", "hep3.src_port", ftypes.UINT16)
 fds3.dst_port = ProtoField.new("Destination port", "hep3.dst_port", ftypes.UINT16)
 fds3.mos = ProtoField.new("MOS", "hep3.mos", ftypes.UINT16)
 fds3.timestamp = ProtoField.new("Timestamp", "hep3.timestamp", ftypes.UINT32)
-fds3.timestamp_us = ProtoField.new("Timestamp us", "hep3.timestamp_us", ftypes.UINT32)
+fds3.timestamp_us = ProtoField.new("Timestamp µs", "hep3.timestamp_us", ftypes.UINT32)
 fds3.capture_id = ProtoField.new("Capture ID", "hep3.capture_id", ftypes.UINT32)
 fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
 fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
@@ -196,6 +203,56 @@ function process_timestamp_us(buffer, offset, subtree)
   subtree:add(fds3.timestamp_us, buffer(offset, len), info)
   return offset + len
 end
+
+function process_vlan_id(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.vlan_id, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_group_id(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.group_id, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_source_mac(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:ether()
+  subtree:add(fds3.source_mac, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_destination_mac(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:ether()
+  subtree:add(fds3.destination_mac, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_ethernet_type(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.ethernet_type, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_tcp_flags(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.tcp_flags, buffer(offset, len), info)
+  return offset + len
+end
+
+function process_ip_TOS(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.ip_TOS, buffer(offset, len), info)
+  return offset + len
+end
+
 
 function process_vendor_id(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
@@ -454,6 +511,20 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       offset = process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
     elseif chunk_type == "00000011" then
       offset = process_correlation_id(buffer, offset, subtree)
+    elseif chunk_type == "00000012" then
+      offset = process_vlan_id(buffer, offset, subtree)
+    elseif chunk_type == "00000013" then
+      offset = process_group_id(buffer, offset, subtree)
+    elseif chunk_type == "00000014" then
+      offset = process_source_mac(buffer, offset, subtree)
+    elseif chunk_type == "00000015" then
+      offset = process_destination_mac(buffer, offset, subtree)
+    elseif chunk_type == "00000016" then
+      offset = process_ethernet_type(buffer, offset, subtree)
+    elseif chunk_type == "00000017" then
+      offset = process_tcp_flags(buffer, offset, subtree)
+    elseif chunk_type == "00000018" then
+      offset = process_ip_TOS(buffer, offset, subtree)
     elseif chunk_type == "00000020" then
       offset = process_mos(buffer, offset, subtree)			
     else
