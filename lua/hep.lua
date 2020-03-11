@@ -69,7 +69,7 @@ fds3.capture_id = ProtoField.new("Capture ID", "hep3.capture_id", ftypes.UINT32)
 fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
 fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
 fds3.payload = ProtoField.new("Payload", "hep3.payload", ftypes.STRING)
-
+fds3.vendor_id = ProtoField.new("Vendor ID", "hep3.vendor_id", ftypes.UINT16)
 
 --------------------------------------------------------------------------------
 function get_chunk_type(buffer, offset)
@@ -107,6 +107,8 @@ function process_proto_id(buffer, offset, subtree)
     info = "UDP"
   elseif tostring(data) == "06" then
     info = "TCP"
+  elseif tostring(data) == "84" then
+    info = "SCTP"
   --else
     -- TODO; add
   end
@@ -195,13 +197,42 @@ function process_timestamp_us(buffer, offset, subtree)
   return offset + len
 end
 
+function process_vendor_id(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)  
+  info = data:uint()
+  subtree:add(fds3.vendor_id, buffer(offset, len), info)
+  return offset + len
+end
+
 function process_protocol_type(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)
     
   if (tostring(data) == "01") then
     info = "SIP"
+  elseif (tostring(data) == "02") then -- 2
+    info = "XMPP"
+  elseif (tostring(data) == "03") then -- 3
+    info = "SDP"
+  elseif (tostring(data) == "04") then -- 4
+    info = "RTP"
   elseif (tostring(data) == "05") then -- 5
     info = "JSON/RTCP"
+  elseif (tostring(data) == "06") then -- 6
+    info = "MGCP"
+  elseif (tostring(data) == "07") then -- 7
+    info = "MEGACO" --H.248
+  elseif (tostring(data) == "08") then -- 8
+    info = "M2UA"
+  elseif (tostring(data) == "09") then -- 9
+    info = "M3UA" -- SS7/SIGTRAN
+  elseif (tostring(data) == "0a") then -- 10
+    info = "IAX"
+  elseif (tostring(data) == "0b") then -- 11
+    info = "H3222"
+  elseif (tostring(data) == "0c") then -- 12
+    info = "H321"
+  elseif (tostring(data) == "0d") then -- 13
+    info = "M2PA"
   elseif (tostring(data) == "14") then -- 14
     info = "JSON/webRTC"
   elseif (tostring(data) == "20") then -- 32
@@ -210,14 +241,26 @@ function process_protocol_type(buffer, offset, subtree)
     info = "JSON/QOS/34"
   elseif (tostring(data) == "23") then -- 35
     info = "MOS"
+  elseif (tostring(data) == "32") then -- 50
+    info = "JSON/SIP"
+  elseif (tostring(data) == "33") then -- 51
+    info = "RESERVED"
+  elseif (tostring(data) == "34") then -- 52
+    info = "RESERVED"
+  elseif (tostring(data) == "35") then -- 53
+    info = "JSON/DNS"
+  elseif (tostring(data) == "36") then -- 54
+    info = "JSON/M3UA(ISUP)"
+  elseif (tostring(data) == "37") then -- 55
+    info = "JSON/RTSP"
+  elseif (tostring(data) == "38") then -- 56
+    info = "JSON/DIAMETER"
+  elseif (tostring(data) == "39") then -- 57
+    info = "JSON/GSM_MAP"
   elseif (tostring(data) == "63") then -- 99
     info = "JSON/QOS/99"
   elseif (tostring(data) == "64") then -- 100
-    info = "LOG"
-  elseif (tostring(data) == "08") then -- 8
-    info = "M2UA"
-  elseif (tostring(data) == "0d") then -- 13
-    info = "M2PA"
+    info = "LOG" -- for ingest into Loki
   else
     info = "Unknown"
 -- TODO; add more protocol types
@@ -271,6 +314,9 @@ function process_payload(buffer, offset, subtree, pinfo, tree, protocol_type)
   elseif (protocol_type == "M2UA") then
     Dissector.get("m2ua"):call(buffer(offset):tvb(), pinfo, tree)
     pinfo.cols.protocol = "HEP3/M2UA"
+  elseif (protocol_type == "RTP") then
+    Dissector.get("rtp"):call(buffer(offset):tvb(), pinfo, tree)
+    pinfo.cols.protocol = "HEP3/RTP"
   elseif (protocol_type == "M2PA") then
     Dissector.get("m2pa"):call(buffer(offset):tvb(), pinfo, tree)
     pinfo.cols.protocol = "HEP3/M2PA"
@@ -411,7 +457,7 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
     elseif chunk_type == "00000020" then
       offset = process_mos(buffer, offset, subtree)			
     else
-      -- procced unknown chunk
+      -- proceed unknown chunk
         if (offset < (total_len - 1)) then
 		offset = process_unknown_chunk(buffer, offset)
         end                              
