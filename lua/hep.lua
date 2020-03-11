@@ -62,8 +62,8 @@ fds3.dst_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.dst_ipv
 fds3.src_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.src_ipv6_address", ftypes.STRING)
 fds3.vlan_id = ProtoField.new("VLAN ID", "hep3.vlan_id", ftypes.UINT16)
 fds3.group_id = ProtoField.new("Group ID", "hep3.group_id", ftypes.STRING)
-fds3.source_mac = ProtoField.new("Source MAC address", "hep3.source_mac", ftypes.ETHER)
-fds3.destination_mac = ProtoField.new("Destination MAC address", "hep3.destination_mac", ftypes.ETHER)
+fds3.source_mac = ProtoField.new("Source MAC address", "hep3.source_mac", ftypes.STRING) -- .ETHER
+fds3.destination_mac = ProtoField.new("Destination MAC address", "hep3.destination_mac", ftypes.STRING) -- .ETHER
 fds3.ethernet_type = ProtoField.new("Ethernet Type", "hep3.ethernet_type", ftypes.UINT16)
 fds3.ip_TOS = ProtoField.new("IP TOS", "hep3.ip_TOS", ftypes.UINT8)
 fds3.tcp_flags = ProtoField.new("TCP Flags", "hep3.tcp_flags", ftypes.UINT8)
@@ -220,14 +220,14 @@ end
 
 function process_source_mac(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
-  info = data:ether()
+  info = data:string() -- :ether() also avail, but range must be 6 bytes
   subtree:add(fds3.source_mac, buffer(offset, len), info)
   return offset + len
 end
 
 function process_destination_mac(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)  
-  info = data:ether()
+  info = data:string() -- :ether() also avail, but range must be 6 bytes
   subtree:add(fds3.destination_mac, buffer(offset, len), info)
   return offset + len
 end
