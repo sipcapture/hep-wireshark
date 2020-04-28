@@ -581,4 +581,5 @@ udp_table:add(9060, hep_proto)
 udp_table:add(9063, hep_proto)
 
 tcp_table = DissectorTable.get("tcp.port")
+tcp_table:add(9060, hep_proto)
 tcp_table:add(9062, hep_proto)
