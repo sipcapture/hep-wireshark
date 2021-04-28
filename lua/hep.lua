@@ -86,6 +86,10 @@ end
 function get_data(buffer, offset)
   chunk_payload_len = buffer(offset + FOUROCTETS, TWOOCTETS):uint() - (FOUROCTETS + TWOOCTETS)
   chunk_payload_offset = offset + FOUROCTETS + TWOOCTETS
+  total_len = buffer:len()
+  if (chunk_payload_len + chunk_payload_offset) > total_len then
+        chunk_payload_len = total_len - chunk_payload_offset
+  end
   return buffer(chunk_payload_offset, chunk_payload_len), chunk_payload_offset, chunk_payload_len
 end
 
