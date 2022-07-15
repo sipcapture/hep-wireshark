@@ -2,7 +2,7 @@
 -- Copyright 2016 (C) Giacomo Vacca <giacomo.vacca@gmail.com>
 -- Copyright 2016 (C) Federico Cabiddu <federico.cabiddu@gmail.com>
 -- Copyright 2017 (C) Alexandr Dubovikov <alexandr.dubovikov@gmail.com>
---
+-- Copyright 2022 (C) Michele Campus <michelecampus5@gmail.com>
 --
 -- This file is free software; you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -74,6 +74,7 @@ fds3.timestamp_unix = ProtoField.new("Unix Timestamp", "hep3.timestamp_unix", ft
 fds3.timestamp_microsec = ProtoField.new("Timestamp µs", "hep3.timestamp_microsec", ftypes.UINT32)
 fds3.capture_node_id = ProtoField.new("Capture Node ID", "hep3.capture_node_id", ftypes.UINT32)
 fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
+fds3.node_name = ProtoField.new("Capture Node Name", "hep3.node_name", ftypes.STRING)
 fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
 fds3.payload = ProtoField.new("Encapsulated Payload", "hep3.payload", ftypes.STRING)
 fds3.vendor_id = ProtoField.new("Vendor ID", "hep3.vendor_id", ftypes.UINT16)
@@ -350,6 +351,13 @@ function get_auth_key(buffer, offset, subtree)
   return offset + len
 end
 
+function get_node_name(buffer, offset, subtree)
+  data, offset, len = get_data(buffer, offset)
+  info = data:string()
+  subtree:add(fds3.node_name, buffer(offset, len), info)
+  return offset + len
+end
+
 function get_correlation_id(buffer, offset, subtree)
   data, offset, len = get_data(buffer, offset)
   info = data:string()
@@ -511,6 +519,8 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       offset = get_capture_node_id(buffer, offset, subtree)
     elseif chunk_type == "0000000e" then
       offset = get_auth_key(buffer, offset, subtree)
+    elseif chunk_type == "00000013" then
+      offset = get_node_name(buffer, offset, subtree)
     elseif chunk_type == "0000000f" then
       offset = determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
     elseif chunk_type == "00000010" then
@@ -521,8 +531,8 @@ function dissect_hep3(buffer, offset, subtree, pinfo, tree)
       offset = get_correlation_id(buffer, offset, subtree)
     elseif chunk_type == "00000012" then
       offset = get_vlan_id(buffer, offset, subtree)
-    elseif chunk_type == "00000013" then
-      offset = get_group_id(buffer, offset, subtree)
+    --elseif chunk_type == "00000013" then
+      --offset = get_group_id(buffer, offset, subtree)
     elseif chunk_type == "00000014" then
       offset = get_source_mac(buffer, offset, subtree)
     elseif chunk_type == "00000015" then
