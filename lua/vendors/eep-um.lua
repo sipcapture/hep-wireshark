@@ -62,8 +62,8 @@ fds3.data_type = ProtoField.new("Data Type", "eep3.data_type", ftypes.UINT16)
 
 --------------------------------------------------------------------------------
 function get_chunk_type(buffer, offset)
-  debug("CHUNK GET1:"..offset)
-  debug("CHUNK GET2:"..FOUROCTETS)
+  -- debug("CHUNK GET1:"..offset)
+  -- debug("CHUNK GET2:"..FOUROCTETS)
   return tostring(buffer(offset, FOUROCTETS))
 end
 
@@ -317,7 +317,7 @@ function dissect_eep3(buffer, offset, subtree, pinfo, tree)
   total_len = buffer(offset, TWOOCTETS):uint()
   subtree:add(fds3.length, buffer(offset, TWOOCTETS), total_len)
   
-  debug("TOTAL LEN:" .. total_len)
+  -- debug("TOTAL LEN:" .. total_len)
 
   offset = offset + TWOOCTETS
   chunk_type = get_chunk_type(buffer, offset)
@@ -395,7 +395,7 @@ function eep3_proto.dissector(buffer, pinfo, tree)
   version = buffer(offset, FOUROCTETS):string()
 
   local size = buffer:len()  
-  debug("REAL LEN:" .. size)
+  -- debug("REAL LEN:" .. size)
   
   if (version == "EEP3") then
     eep3_proto_dissector(buffer, pinfo, tree)
