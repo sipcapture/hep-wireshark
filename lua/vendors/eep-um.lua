@@ -394,7 +394,7 @@ function eep3_proto.dissector(buffer, pinfo, tree)
   offset = 0
   version = buffer(offset, FOUROCTETS):string()
 
-  local size = buffer:len()  
+  -- local size = buffer:len()  
   -- debug("REAL LEN:" .. size)
   
   if (version == "EEP3") then
