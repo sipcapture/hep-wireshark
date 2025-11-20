@@ -23,74 +23,91 @@ FOUROCTETS = 4
 TWOOCTETS = 2
 ONEOCTET = 1
 
-hep_proto = Proto("hep", "HEP Protocol")
-hep1_proto = Proto("hep1", "HEP1 Protocol")
-hep2_proto = Proto("hep2", "HEP2 Protocol")
-hep3_proto = Proto("hep3", "HEP3 Protocol")
+-- Wireshark 4.x compatibility: only create protocols if they don't already exist
+if not hep_proto then
+    hep_proto = Proto("hep", "HEP Protocol")
+    hep_proto.fields = {}
+end
+if not hep1_proto then
+    hep1_proto = Proto("hep1", "HEP1 Protocol")
+    hep1_proto.fields = {}
+end
+if not hep2_proto then
+    hep2_proto = Proto("hep2", "HEP2 Protocol")
+    hep2_proto.fields = {}
+end
+if not hep3_proto then
+    hep3_proto = Proto("hep3", "HEP3 Protocol")
+    hep3_proto.fields = {}
+end
 
-hep_proto.fields = {}
 local fds = hep_proto.fields
-fds.version = ProtoField.new("Version", "hep.version", ftypes.UINT8)
+if not fds.version then
+    fds.version = ProtoField.new("Version", "hep.version", ftypes.UINT8)
+end
 
-hep1_proto.fields = {}
 local fds1 = hep1_proto.fields
-fds1.version = ProtoField.new("Version", "hep1.version", ftypes.UINT8)
-fds1.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep1.hep_packet_size", ftypes.UINT8)
-fds1.ip_family = ProtoField.new("IP family", "hep1.ip_family", ftypes.STRING)
-fds1.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep1.transport_layer_protocol",
-    ftypes.STRING)
-fds1.source_port = ProtoField.new("Source port", "hep1.source_port", ftypes.UINT16)
-fds1.destination_port = ProtoField.new("Destination port", "hep1.destination_port", ftypes.UINT16)
-fds1.source_ip_address = ProtoField.new("Source IPv4 address", "hep1.source_ip_address", ftypes.IPv4)
-fds1.destination_ip_address = ProtoField.new("Destination IPv4 address", "hep1.destination_ip_address", ftypes.IPv4)
-fds1.payload = ProtoField.new("Encapsulated Payload", "hep1.payload", ftypes.STRING)
+if not fds1.version then
+    fds1.version = ProtoField.new("Version", "hep1.version", ftypes.UINT8)
+    fds1.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep1.hep_packet_size", ftypes.UINT8)
+    fds1.ip_family = ProtoField.new("IP family", "hep1.ip_family", ftypes.STRING)
+    fds1.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep1.transport_layer_protocol",
+        ftypes.STRING)
+    fds1.source_port = ProtoField.new("Source port", "hep1.source_port", ftypes.UINT16)
+    fds1.destination_port = ProtoField.new("Destination port", "hep1.destination_port", ftypes.UINT16)
+    fds1.source_ip_address = ProtoField.new("Source IPv4 address", "hep1.source_ip_address", ftypes.IPv4)
+    fds1.destination_ip_address = ProtoField.new("Destination IPv4 address", "hep1.destination_ip_address", ftypes.IPv4)
+    fds1.payload = ProtoField.new("Encapsulated Payload", "hep1.payload", ftypes.STRING)
+end
 
-hep2_proto.fields = {}
 local fds2 = hep2_proto.fields
-fds2.version = ProtoField.new("Version", "hep2.version", ftypes.UINT8)
-fds2.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep2.hep_packet_size", ftypes.UINT8)
-fds2.ip_family = ProtoField.new("IP family", "hep2.ip_family", ftypes.STRING)
-fds2.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep2.transport_layer_protocol",
-    ftypes.STRING)
-fds2.source_port = ProtoField.new("Source port", "hep2.source_port", ftypes.UINT16)
-fds2.destination_port = ProtoField.new("Destination port", "hep2.destination_port", ftypes.UINT16)
-fds2.source_ip_address = ProtoField.new("Source IPv4 address", "hep2.source_ip_address", ftypes.IPv4)
-fds2.destination_ip_address = ProtoField.new("Destination IPv4 address", "hep2.destination_ip_address", ftypes.IPv4)
-fds2.timestamp_unix = ProtoField.new("Unix Timestamp (LE)", "hep2.timestamp_unix", ftypes.UINT32)
-fds2.timestamp_microsec = ProtoField.new("Timestamp µs (LE)", "hep2.timestamp_microsec", ftypes.UINT32)
-fds2.capture_node_id = ProtoField.new("Capture Node ID (LE)", "hep2.capture_node_id", ftypes.UINT16)
-fds2.payload = ProtoField.new("Encapsulated Payload", "hep3.payload", ftypes.STRING)
+if not fds2.version then
+    fds2.version = ProtoField.new("Version", "hep2.version", ftypes.UINT8)
+    fds2.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep2.hep_packet_size", ftypes.UINT8)
+    fds2.ip_family = ProtoField.new("IP family", "hep2.ip_family", ftypes.STRING)
+    fds2.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep2.transport_layer_protocol",
+        ftypes.STRING)
+    fds2.source_port = ProtoField.new("Source port", "hep2.source_port", ftypes.UINT16)
+    fds2.destination_port = ProtoField.new("Destination port", "hep2.destination_port", ftypes.UINT16)
+    fds2.source_ip_address = ProtoField.new("Source IPv4 address", "hep2.source_ip_address", ftypes.IPv4)
+    fds2.destination_ip_address = ProtoField.new("Destination IPv4 address", "hep2.destination_ip_address", ftypes.IPv4)
+    fds2.timestamp_unix = ProtoField.new("Unix Timestamp (LE)", "hep2.timestamp_unix", ftypes.UINT32)
+    fds2.timestamp_microsec = ProtoField.new("Timestamp µs (LE)", "hep2.timestamp_microsec", ftypes.UINT32)
+    fds2.capture_node_id = ProtoField.new("Capture Node ID (LE)", "hep2.capture_node_id", ftypes.UINT16)
+    fds2.payload = ProtoField.new("Encapsulated Payload", "hep3.payload", ftypes.STRING)
+end
 
-hep3_proto.fields = {}
 local fds3 = hep3_proto.fields
-fds3.hep_version = ProtoField.new("HEP Version", "hep3.version", ftypes.STRING)
-fds3.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep3.hep_packet_size", ftypes.UINT16)
-fds3.ip_family = ProtoField.new("IP family", "hep3.ip_family", ftypes.STRING)
-fds3.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep3.transport_layer_protocol",
-    ftypes.STRING)
-fds3.application_protocol = ProtoField.new("Application Protocol", "hep3.application_protocol", ftypes.STRING)
-fds3.source_ipv4_address = ProtoField.new("Source IPv4 address", "hep3.source_ipv4_address", ftypes.IPv4)
-fds3.destination_ipv4_address = ProtoField.new("Destination IPv4 address", "hep3.destination_ipv4_address", ftypes.IPv4)
-fds3.source_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.source_ipv6_address", ftypes.IPv6)
-fds3.destination_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.destination_ipv6_address", ftypes.IPv6)
-fds3.vlan_id = ProtoField.new("VLAN ID", "hep3.vlan_id", ftypes.UINT16)
-fds3.group_id = ProtoField.new("Group ID", "hep3.group_id", ftypes.STRING)
-fds3.source_mac = ProtoField.new("Source MAC address", "hep3.source_mac", ftypes.STRING) -- .ETHER
-fds3.destination_mac = ProtoField.new("Destination MAC address", "hep3.destination_mac", ftypes.STRING) -- .ETHER
-fds3.ethernet_type = ProtoField.new("Ethernet Type", "hep3.ethernet_type", ftypes.UINT16)
-fds3.ip_TOS = ProtoField.new("IP TOS", "hep3.ip_TOS", ftypes.UINT8)
-fds3.tcp_flags = ProtoField.new("TCP Flags", "hep3.tcp_flags", ftypes.UINT8)
-fds3.source_port = ProtoField.new("Source port", "hep3.source_port", ftypes.UINT16)
-fds3.destination_port = ProtoField.new("Destination port", "hep3.destination_port", ftypes.UINT16)
-fds3.mos = ProtoField.new("MOS", "hep3.mos", ftypes.UINT16)
-fds3.timestamp_unix = ProtoField.new("Unix Timestamp", "hep3.timestamp_unix", ftypes.UINT32)
-fds3.timestamp_microsec = ProtoField.new("Timestamp µs", "hep3.timestamp_microsec", ftypes.UINT32)
-fds3.capture_node_id = ProtoField.new("Capture Node ID", "hep3.capture_node_id", ftypes.UINT32)
-fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
-fds3.node_name = ProtoField.new("Capture Node Name", "hep3.node_name", ftypes.STRING)
-fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
-fds3.payload = ProtoField.new("Encapsulated Payload", "hep3.payload", ftypes.STRING)
-fds3.vendor_id = ProtoField.new("Vendor ID", "hep3.vendor_id", ftypes.UINT16)
+if not fds3.hep_version then
+    fds3.hep_version = ProtoField.new("HEP Version", "hep3.version", ftypes.STRING)
+    fds3.hep_packet_size = ProtoField.new("HEP Packet Size (Bytes)", "hep3.hep_packet_size", ftypes.UINT16)
+    fds3.ip_family = ProtoField.new("IP family", "hep3.ip_family", ftypes.STRING)
+    fds3.transport_layer_protocol = ProtoField.new("Ingested Transport Protocol", "hep3.transport_layer_protocol",
+        ftypes.STRING)
+    fds3.application_protocol = ProtoField.new("Application Protocol", "hep3.application_protocol", ftypes.STRING)
+    fds3.source_ipv4_address = ProtoField.new("Source IPv4 address", "hep3.source_ipv4_address", ftypes.IPv4)
+    fds3.destination_ipv4_address = ProtoField.new("Destination IPv4 address", "hep3.destination_ipv4_address", ftypes.IPv4)
+    fds3.source_ipv6_address = ProtoField.new("Source IPv6 address", "hep3.source_ipv6_address", ftypes.IPv6)
+    fds3.destination_ipv6_address = ProtoField.new("Destination IPv6 address", "hep3.destination_ipv6_address", ftypes.IPv6)
+    fds3.vlan_id = ProtoField.new("VLAN ID", "hep3.vlan_id", ftypes.UINT16)
+    fds3.group_id = ProtoField.new("Group ID", "hep3.group_id", ftypes.STRING)
+    fds3.source_mac = ProtoField.new("Source MAC address", "hep3.source_mac", ftypes.STRING) -- .ETHER
+    fds3.destination_mac = ProtoField.new("Destination MAC address", "hep3.destination_mac", ftypes.STRING) -- .ETHER
+    fds3.ethernet_type = ProtoField.new("Ethernet Type", "hep3.ethernet_type", ftypes.UINT16)
+    fds3.ip_TOS = ProtoField.new("IP TOS", "hep3.ip_TOS", ftypes.UINT8)
+    fds3.tcp_flags = ProtoField.new("TCP Flags", "hep3.tcp_flags", ftypes.UINT8)
+    fds3.source_port = ProtoField.new("Source port", "hep3.source_port", ftypes.UINT16)
+    fds3.destination_port = ProtoField.new("Destination port", "hep3.destination_port", ftypes.UINT16)
+    fds3.mos = ProtoField.new("MOS", "hep3.mos", ftypes.UINT16)
+    fds3.timestamp_unix = ProtoField.new("Unix Timestamp", "hep3.timestamp_unix", ftypes.UINT32)
+    fds3.timestamp_microsec = ProtoField.new("Timestamp µs", "hep3.timestamp_microsec", ftypes.UINT32)
+    fds3.capture_node_id = ProtoField.new("Capture Node ID", "hep3.capture_node_id", ftypes.UINT32)
+    fds3.auth_key = ProtoField.new("Authentication Key", "hep3.auth_key", ftypes.STRING)
+    fds3.node_name = ProtoField.new("Capture Node Name", "hep3.node_name", ftypes.STRING)
+    fds3.correlation_id = ProtoField.new("Correlation ID", "hep3.correlation_id", ftypes.STRING)
+    fds3.payload = ProtoField.new("Encapsulated Payload", "hep3.payload", ftypes.STRING)
+    fds3.vendor_id = ProtoField.new("Vendor ID", "hep3.vendor_id", ftypes.UINT16)
+end
 
 --------------------------------------------------------------------------------
 function get_chunk_data(buffer, offset)
