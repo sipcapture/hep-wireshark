@@ -700,3 +700,18 @@ udp_table:add(9063, hep_proto)
 tcp_table = DissectorTable.get("tcp.port")
 tcp_table:add(9060, hep_proto)
 tcp_table:add(9062, hep_proto)
+
+-- HTTP/HTTP2 support for 5G use cases
+-- Register with HTTP media type for HEP over HTTP
+http_media_table = DissectorTable.get("media_type")
+if http_media_table then
+    http_media_table:add("application/hep", hep_proto)
+    http_media_table:add("application/vnd.3gpp.hep", hep_proto)
+end
+
+-- Register with HTTP2 streaming dissector
+http2_table = DissectorTable.get("http2.streamid")
+if http2_table then
+    -- HTTP2 streams will be identified by content-type header
+    -- The http2 dissector will call media_type table based on content-type
+end
