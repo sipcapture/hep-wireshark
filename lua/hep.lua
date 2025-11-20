@@ -111,16 +111,42 @@ end
 
 --------------------------------------------------------------------------------
 function get_chunk_data(buffer, offset)
+    -- Validate we have enough data for chunk type
+    local total_len = buffer:len()
+    if offset + FOUROCTETS > total_len then
+        return nil
+    end
     return tostring(buffer(offset, FOUROCTETS))
 end
 
 function get_data(buffer, offset)
-    chunk_payload_len = buffer(offset + FOUROCTETS, TWOOCTETS):uint() - (FOUROCTETS + TWOOCTETS)
-    chunk_payload_offset = offset + FOUROCTETS + TWOOCTETS
-    total_len = buffer:len()
-    if (chunk_payload_len + chunk_payload_offset) > total_len then
-        chunk_payload_len = total_len - chunk_payload_offset
+    local total_len = buffer:len()
+    
+    -- Validate we have enough data to read chunk length
+    if offset + FOUROCTETS + TWOOCTETS > total_len then
+        return nil, nil, nil
     end
+    
+    -- Read chunk length from header
+    local chunk_total_len = buffer(offset + FOUROCTETS, TWOOCTETS):uint()
+    
+    -- Validate chunk length is at least the header size (6 bytes = 4 for type + 2 for length)
+    if chunk_total_len < (FOUROCTETS + TWOOCTETS) then
+        return nil, nil, nil
+    end
+    
+    -- Calculate payload length (total chunk length minus header)
+    local chunk_payload_len = chunk_total_len - (FOUROCTETS + TWOOCTETS)
+    local chunk_payload_offset = offset + FOUROCTETS + TWOOCTETS
+    
+    -- Validate we have enough data for the payload
+    if chunk_payload_offset + chunk_payload_len > total_len then
+        chunk_payload_len = total_len - chunk_payload_offset
+        if chunk_payload_len < 0 then
+            return nil, nil, nil
+        end
+    end
+    
     return buffer(chunk_payload_offset, chunk_payload_len), chunk_payload_offset, chunk_payload_len
 end
 
@@ -131,7 +157,10 @@ function add_element(subtree, buffer, offset, len, description, info)
 end
 
 function get_ip_family(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     if tostring(data) == "02" then
         info = "IPv4"
     elseif tostring(data) == "0a" then
@@ -139,12 +168,15 @@ function get_ip_family(buffer, offset, subtree)
     else
         info = "Unknown IP Family"
     end
-    subtree:add(fds3.ip_family, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.ip_family, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_transport_proto_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     if tostring(data) == "11" then
         info = "UDP"
     elseif tostring(data) == "06" then
@@ -154,22 +186,28 @@ function get_transport_proto_id(buffer, offset, subtree)
         -- else
         -- TODO; add
     end
-    subtree:add(fds3.transport_layer_protocol, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.transport_layer_protocol, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_source_ipv4_address(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:ipv4()
-    subtree:add(fds3.source_ipv4_address, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.source_ipv4_address, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_destination_ipv4_address(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:ipv4()
-    subtree:add(fds3.destination_ipv4_address, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.destination_ipv4_address, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 -- function decompose_ipv6(data)
@@ -192,114 +230,162 @@ end
 -- end
 
 function get_source_ipv6_address(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     -- local info = decompose_ipv6(data)
     info = data:ipv6()
-    subtree:add(fds3.source_ipv6_address, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.source_ipv6_address, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_destination_ipv6_address(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     -- local info = decompose_ipv6(data)
     info = data:ipv6()
-    subtree:add(fds3.destination_ipv6_address, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.destination_ipv6_address, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_source_port(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.source_port, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.source_port, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_destination_port(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.destination_port, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.destination_port, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_mos(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.mos, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.mos, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_timestamp(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.timestamp_unix, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.timestamp_unix, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_timestamp_microsec(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.timestamp_microsec, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.timestamp_microsec, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_vlan_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.vlan_id, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.vlan_id, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_group_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.group_id, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.group_id, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_source_mac(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string() -- :ether() also avail, but range must be 6 bytes
-    subtree:add(fds3.source_mac, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.source_mac, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_destination_mac(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string() -- :ether() also avail, but range must be 6 bytes
-    subtree:add(fds3.destination_mac, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.destination_mac, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_ethernet_type(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.ethernet_type, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.ethernet_type, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_tcp_flags(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.tcp_flags, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.tcp_flags, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_ip_TOS(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.ip_TOS, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.ip_TOS, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function process_vendor_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.vendor_id, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.vendor_id, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_application_protocol(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil, nil
+    end
 
     if (tostring(data) == "01") then
         info = "SIP"
@@ -360,88 +446,122 @@ function get_application_protocol(buffer, offset, subtree)
         -- TODO; add more protocol types
     end
 
-    subtree:add(fds3.application_protocol, buffer(offset, len), info)
-    next_offset = offset + len
+    subtree:add(fds3.application_protocol, buffer(data_offset, len), info)
+    next_offset = data_offset + len
     -- Careful. It must return the protocol type too. Improvable.
     return next_offset, info
 end
 
 function get_capture_node_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:uint()
-    subtree:add(fds3.capture_node_id, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.capture_node_id, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_auth_key(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string()
-    subtree:add(fds3.auth_key, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.auth_key, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_node_name(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string()
-    subtree:add(fds3.node_name, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.node_name, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function get_correlation_id(buffer, offset, subtree)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string()
-    subtree:add(fds3.correlation_id, buffer(offset, len), info)
-    return offset + len
+    subtree:add(fds3.correlation_id, buffer(data_offset, len), info)
+    return data_offset + len
 end
 
 function skip_unknown_chunk(buffer, offset)
-    data, offset, len = get_data(buffer, offset)
-    return offset + len
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
+    return data_offset + len
 end
 
 function determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
-    data, offset, len = get_data(buffer, offset)
+    data, data_offset, len = get_data(buffer, offset)
+    if data == nil then
+        return nil
+    end
     info = data:string()
-    subtree:add(fds3.payload, buffer(offset, len), info)
+    subtree:add(fds3.payload, buffer(data_offset, len), info)
 
     if (application_protocol == "SIP") then
-        Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
+        Dissector.get("sip"):call(buffer(data_offset):tvb(), pinfo, tree)
         pinfo.cols.protocol = "HEP3/SIP"
     elseif ((application_protocol == "JSON") or (application_protocol == "JSON/RTCP") or
         (application_protocol == "JSON/QOS/32") or (application_protocol == "JSON/QOS/99") or
         (application_protocol == "MOS") or (application_protocol == "JSON/QOS/34")) then
-        Dissector.get("json"):call(buffer(offset):tvb(), pinfo, tree)
+        Dissector.get("json"):call(buffer(data_offset):tvb(), pinfo, tree)
         pinfo.cols.protocol = "HEP3/" .. application_protocol
     elseif (application_protocol == "LOG") then
         pinfo.cols.protocol = "HEP3/" .. application_protocol
     elseif (application_protocol == "M2UA") then
-        Dissector.get("m2ua"):call(buffer(offset):tvb(), pinfo, tree)
+        Dissector.get("m2ua"):call(buffer(data_offset):tvb(), pinfo, tree)
         pinfo.cols.protocol = "HEP3/M2UA"
     elseif (application_protocol == "RTP") then
-        Dissector.get("rtp"):call(buffer(offset):tvb(), pinfo, tree)
+        Dissector.get("rtp"):call(buffer(data_offset):tvb(), pinfo, tree)
         pinfo.cols.protocol = "HEP3/RTP"
     elseif (application_protocol == "M2PA") then
-        Dissector.get("m2pa"):call(buffer(offset):tvb(), pinfo, tree)
+        Dissector.get("m2pa"):call(buffer(data_offset):tvb(), pinfo, tree)
         pinfo.cols.protocol = "HEP3/M2PA"
     else
         pinfo.cols.protocol = "HEP3"
     end
 
-    next_offset = offset + len
+    next_offset = data_offset + len
     return next_offset
 end
 
 function dissect_hep1(buffer, offset, subtree, pinfo, tree)
+    local buffer_len = buffer:len()
+    
+    -- Minimum HEP1 size: 1 (version) + 1 (length) + 1 (ip_family) + 1 (protocol) + 2 (src_port) + 2 (dst_port) + 4 (src_ip) + 4 (dst_ip) = 16 bytes
+    if buffer_len < 16 then
+        return
+    end
+    
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     version = buffer(offset, ONEOCTET):uint()
     subtree:add(fds1.version, buffer(offset, ONEOCTET), version)
 
     offset = ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     total_len = buffer(offset, ONEOCTET):uint()
     subtree:add(fds1.hep_packet_size, buffer(offset, ONEOCTET), total_len)
 
     offset = offset + ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     ip_family_buffer = buffer(offset, ONEOCTET)
 
     if (tostring(ip_family_buffer) == "02") then
@@ -456,6 +576,9 @@ function dissect_hep1(buffer, offset, subtree, pinfo, tree)
 
     offset = offset + ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     transport_layer_protocol_id_buffer = buffer(offset, ONEOCTET)
 
     if (tostring(transport_layer_protocol_id_buffer) == "11") then
@@ -473,23 +596,38 @@ function dissect_hep1(buffer, offset, subtree, pinfo, tree)
     subtree:add(fds1.transport_layer_protocol, buffer(offset, ONEOCTET), transport_layer_protocol)
     offset = offset + ONEOCTET
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     source_port = buffer(offset, TWOOCTETS):uint()
     subtree:add(fds1.source_port, buffer(offset, TWOOCTETS), source_port)
     offset = offset + TWOOCTETS
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     destination_port = buffer(offset, TWOOCTETS):uint()
     subtree:add(fds1.destination_port, buffer(offset, TWOOCTETS), destination_port)
     offset = offset + TWOOCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ip = buffer(offset, FOUROCTETS):ipv4()
     subtree:add(fds1.source_ip_address, buffer(offset, FOUROCTETS), ip)
     offset = offset + FOUROCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ip = buffer(offset, FOUROCTETS):ipv4()
     subtree:add(fds1.destination_ip_address, buffer(offset, FOUROCTETS), ip)
     offset = offset + FOUROCTETS
 
-    Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
+    -- Only attempt to dissect payload if there's data remaining
+    if offset < buffer_len then
+        Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
+    end
 
     pinfo.cols.protocol = "HEP1/SIP"
 
@@ -497,16 +635,33 @@ function dissect_hep1(buffer, offset, subtree, pinfo, tree)
 end
 
 function dissect_hep2(buffer, offset, subtree, pinfo, tree)
+    local buffer_len = buffer:len()
+    
+    -- Minimum HEP2 size: 1 (version) + 1 (length) + 1 (ip_family) + 1 (protocol) + 2 (src_port) + 2 (dst_port) + 
+    --                     4 (src_ip) + 4 (dst_ip) + 4 (timestamp) + 4 (timestamp_us) + 2 (capture_node_id) + 2 (unknown) = 28 bytes
+    if buffer_len < 28 then
+        return
+    end
+    
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     version = buffer(offset, ONEOCTET):uint()
     subtree:add(fds2.version, buffer(offset, ONEOCTET), version)
 
     offset = ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     total_len = buffer(offset, ONEOCTET):uint()
     subtree:add(fds2.hep_packet_size, buffer(offset, ONEOCTET), total_len)
 
     offset = offset + ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     ip_family_buffer = buffer(offset, ONEOCTET)
 
     if (tostring(ip_family_buffer) == "02") then
@@ -521,6 +676,9 @@ function dissect_hep2(buffer, offset, subtree, pinfo, tree)
 
     offset = offset + ONEOCTET
 
+    if offset + ONEOCTET > buffer_len then
+        return
+    end
     transport_layer_protocol_id_buffer = buffer(offset, ONEOCTET)
 
     if (tostring(transport_layer_protocol_id_buffer) == "11") then
@@ -538,39 +696,66 @@ function dissect_hep2(buffer, offset, subtree, pinfo, tree)
     subtree:add(fds2.transport_layer_protocol, buffer(offset, ONEOCTET), transport_layer_protocol)
     offset = offset + ONEOCTET
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     source_port = buffer(offset, TWOOCTETS):uint()
     subtree:add(fds2.source_port, buffer(offset, TWOOCTETS), source_port)
     offset = offset + TWOOCTETS
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     destination_port = buffer(offset, TWOOCTETS):uint()
     subtree:add(fds2.destination_port, buffer(offset, TWOOCTETS), destination_port)
     offset = offset + TWOOCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ip = buffer(offset, FOUROCTETS):ipv4()
     subtree:add(fds2.source_ip_address, buffer(offset, FOUROCTETS), ip)
     offset = offset + FOUROCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ip = buffer(offset, FOUROCTETS):ipv4()
     subtree:add(fds2.destination_ip_address, buffer(offset, FOUROCTETS), ip)
     offset = offset + FOUROCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ts = buffer(offset, FOUROCTETS):le_uint()
     subtree:add(fds2.timestamp_unix, buffer(offset, FOUROCTETS), ts)
     offset = offset + FOUROCTETS
 
+    if offset + FOUROCTETS > buffer_len then
+        return
+    end
     ts_us = buffer(offset, FOUROCTETS):le_uint()
     subtree:add(fds2.timestamp_microsec, buffer(offset, FOUROCTETS), ts_us)
     offset = offset + FOUROCTETS
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     capture_node_id = buffer(offset, TWOOCTETS):le_uint()
     subtree:add(fds2.capture_node_id, buffer(offset, TWOOCTETS), capture_node_id)
     offset = offset + TWOOCTETS
 
+    if offset + TWOOCTETS > buffer_len then
+        return
+    end
     data_buffer = buffer(offset, TWOOCTETS):le_uint()
     subtree:add(buffer(offset, TWOOCTETS), "Unknown Type: " .. tostring(data_buffer))
     offset = offset + TWOOCTETS
 
-    Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
+    -- Only attempt to dissect payload if there's data remaining
+    if offset < buffer_len then
+        Dissector.get("sip"):call(buffer(offset):tvb(), pinfo, tree)
+    end
 
     pinfo.cols.protocol = "HEP2/SIP"
 
@@ -578,78 +763,108 @@ function dissect_hep2(buffer, offset, subtree, pinfo, tree)
 end
 
 function dissect_hep3(buffer, offset, subtree, pinfo, tree)
+    local buffer_len = buffer:len()
+    
+    -- Validate we have minimum HEP3 header (4 bytes "HEP3" + 2 bytes length)
+    if buffer_len < offset + FOUROCTETS + TWOOCTETS then
+        return
+    end
+    
     hep_version = buffer(offset, FOUROCTETS):string()
     subtree:add(fds3.hep_version, buffer(offset, FOUROCTETS), hep_version)
     offset = offset + FOUROCTETS
 
     total_len = buffer(offset, TWOOCTETS):uint()
     subtree:add(fds3.hep_packet_size, buffer(offset, TWOOCTETS), total_len)
+    
+    -- Validate total_len is reasonable
+    if total_len < (FOUROCTETS + TWOOCTETS) or total_len > buffer_len then
+        return
+    end
 
     offset = offset + TWOOCTETS
     chunk_type = get_chunk_data(buffer, offset)
+    
+    -- If we can't read chunk_type, exit
+    if chunk_type == nil then
+        return
+    end
 
-    while (offset < (total_len - 1)) do
+    while (offset < (total_len - 1) and offset < buffer_len) do
+        local new_offset = nil
+        
         if chunk_type == "00000001" then
-            offset = get_ip_family(buffer, offset, subtree)
+            new_offset = get_ip_family(buffer, offset, subtree)
         elseif chunk_type == "00000002" then
-            offset = get_transport_proto_id(buffer, offset, subtree)
+            new_offset = get_transport_proto_id(buffer, offset, subtree)
         elseif chunk_type == "00000003" then
-            offset = get_source_ipv4_address(buffer, offset, subtree)
+            new_offset = get_source_ipv4_address(buffer, offset, subtree)
         elseif chunk_type == "00000004" then
-            offset = get_destination_ipv4_address(buffer, offset, subtree)
+            new_offset = get_destination_ipv4_address(buffer, offset, subtree)
         elseif chunk_type == "00000005" then
-            offset = get_source_ipv6_address(buffer, offset, subtree)
+            new_offset = get_source_ipv6_address(buffer, offset, subtree)
         elseif chunk_type == "00000006" then
-            offset = get_destination_ipv6_address(buffer, offset, subtree)
+            new_offset = get_destination_ipv6_address(buffer, offset, subtree)
         elseif chunk_type == "00000007" then
-            offset = get_source_port(buffer, offset, subtree)
+            new_offset = get_source_port(buffer, offset, subtree)
         elseif chunk_type == "00000008" then
-            offset = get_destination_port(buffer, offset, subtree)
+            new_offset = get_destination_port(buffer, offset, subtree)
         elseif chunk_type == "00000009" then
-            offset = get_timestamp(buffer, offset, subtree)
+            new_offset = get_timestamp(buffer, offset, subtree)
         elseif chunk_type == "0000000a" then
-            offset = get_timestamp_microsec(buffer, offset, subtree)
+            new_offset = get_timestamp_microsec(buffer, offset, subtree)
         elseif chunk_type == "0000000b" then
-            offset, application_protocol = get_application_protocol(buffer, offset, subtree)
+            new_offset, application_protocol = get_application_protocol(buffer, offset, subtree)
         elseif chunk_type == "0000000c" then
-            offset = get_capture_node_id(buffer, offset, subtree)
+            new_offset = get_capture_node_id(buffer, offset, subtree)
         elseif chunk_type == "0000000e" then
-            offset = get_auth_key(buffer, offset, subtree)
+            new_offset = get_auth_key(buffer, offset, subtree)
         elseif chunk_type == "00000013" then
-            offset = get_node_name(buffer, offset, subtree)
+            new_offset = get_node_name(buffer, offset, subtree)
         elseif chunk_type == "0000000f" then
-            offset = determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
+            new_offset = determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
         elseif chunk_type == "00000010" then
             -- compressed payload. Treat as normal payload
             -- https://github.com/sipcapture/hep-wireshark/issues/5
-            offset = determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
+            new_offset = determine_payload_content(buffer, offset, subtree, pinfo, tree, application_protocol)
         elseif chunk_type == "00000011" then
-            offset = get_correlation_id(buffer, offset, subtree)
+            new_offset = get_correlation_id(buffer, offset, subtree)
         elseif chunk_type == "00000012" then
-            offset = get_vlan_id(buffer, offset, subtree)
+            new_offset = get_vlan_id(buffer, offset, subtree)
             -- elseif chunk_type == "00000013" then
-            -- offset = get_group_id(buffer, offset, subtree)
+            -- new_offset = get_group_id(buffer, offset, subtree)
         elseif chunk_type == "00000014" then
-            offset = get_source_mac(buffer, offset, subtree)
+            new_offset = get_source_mac(buffer, offset, subtree)
         elseif chunk_type == "00000015" then
-            offset = get_destination_mac(buffer, offset, subtree)
+            new_offset = get_destination_mac(buffer, offset, subtree)
         elseif chunk_type == "00000016" then
-            offset = get_ethernet_type(buffer, offset, subtree)
+            new_offset = get_ethernet_type(buffer, offset, subtree)
         elseif chunk_type == "00000017" then
-            offset = get_tcp_flags(buffer, offset, subtree)
+            new_offset = get_tcp_flags(buffer, offset, subtree)
         elseif chunk_type == "00000018" then
-            offset = get_ip_TOS(buffer, offset, subtree)
+            new_offset = get_ip_TOS(buffer, offset, subtree)
         elseif chunk_type == "00000020" then
-            offset = get_mos(buffer, offset, subtree)
+            new_offset = get_mos(buffer, offset, subtree)
         else
             -- proceed unknown chunk
             if (offset < (total_len - 1)) then
-                offset = skip_unknown_chunk(buffer, offset)
+                new_offset = skip_unknown_chunk(buffer, offset)
             end
         end
+        
+        -- If chunk processing failed (returned nil), exit the loop
+        if new_offset == nil then
+            break
+        end
+        
+        offset = new_offset
 
-        if (offset < (total_len - 1)) then
+        if (offset < (total_len - 1) and offset < buffer_len) then
             chunk_type = get_chunk_data(buffer, offset)
+            -- If we can't read next chunk_type, exit
+            if chunk_type == nil then
+                break
+            end
         end
     end -- while
 end
@@ -670,15 +885,25 @@ function hep3_proto_dissector(buffer, pinfo, tree)
 end
 
 function hep_proto.dissector(buffer, pinfo, tree)
-    offset = 0
-    version = buffer(offset, FOUROCTETS):string()
-
-    if (version == "HEP3") then
-        hep3_proto_dissector(buffer, pinfo, tree)
+    local buffer_len = buffer:len()
+    
+    -- Need at least 1 byte to determine version
+    if buffer_len < 1 then
         return
     end
+    
+    offset = 0
+    
+    -- Try to detect HEP3 (requires at least 4 bytes for "HEP3" marker)
+    if buffer_len >= FOUROCTETS then
+        version = buffer(offset, FOUROCTETS):string()
+        if (version == "HEP3") then
+            hep3_proto_dissector(buffer, pinfo, tree)
+            return
+        end
+    end
 
-    -- Let's try HEP2
+    -- Let's try HEP2/HEP1 (requires at least 1 byte for version)
     version = buffer(offset, ONEOCTET)
 
     if (tostring(version) == "02") then
@@ -688,7 +913,7 @@ function hep_proto.dissector(buffer, pinfo, tree)
         hep1_proto_dissector(buffer, pinfo, tree)
         return
     else
-        -- Not HEP3 or HEP2
+        -- Not HEP3 or HEP2 or HEP1
     end
 end
 
