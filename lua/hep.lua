@@ -871,49 +871,109 @@ end
 
 function hep1_proto_dissector(buffer, pinfo, tree)
     local subtree = tree:add(hep1_proto, buffer(), "HEP1 Protocol")
-    dissect_hep1(buffer, offset, subtree, pinfo, tree)
+    dissect_hep1(buffer, 0, subtree, pinfo, tree)
 end
 
 function hep2_proto_dissector(buffer, pinfo, tree)
     local subtree = tree:add(hep2_proto, buffer(), "HEP2 Protocol")
-    dissect_hep2(buffer, offset, subtree, pinfo, tree)
+    dissect_hep2(buffer, 0, subtree, pinfo, tree)
 end
 
 function hep3_proto_dissector(buffer, pinfo, tree)
     local subtree = tree:add(hep3_proto, buffer(), "HEP3 Protocol")
-    dissect_hep3(buffer, offset, subtree, pinfo, tree)
+    dissect_hep3(buffer, 0, subtree, pinfo, tree)
 end
 
-function hep_proto.dissector(buffer, pinfo, tree)
+local HEP3_MAGIC = "HEP3"
+
+-- Returns packet length in bytes, or nil if more data is needed (second return: bytes needed).
+function hep_packet_length_at(buffer, offset)
     local buffer_len = buffer:len()
-    
-    -- Need at least 1 byte to determine version
+    local remaining = buffer_len - offset
+
+    if remaining < 1 then
+        return nil, 1
+    end
+
+    if remaining >= FOUROCTETS then
+        if buffer(offset, FOUROCTETS):string() == HEP3_MAGIC then
+            if remaining < FOUROCTETS + TWOOCTETS then
+                return nil, (FOUROCTETS + TWOOCTETS) - remaining
+            end
+            local total_len = buffer(offset + FOUROCTETS, TWOOCTETS):uint()
+            if total_len < (FOUROCTETS + TWOOCTETS) then
+                return nil
+            end
+            return total_len
+        end
+    elseif remaining < FOUROCTETS then
+        local partial = buffer(offset, remaining):string()
+        if HEP3_MAGIC:sub(1, remaining) == partial then
+            return nil, FOUROCTETS - remaining
+        end
+    end
+
+    local version = tostring(buffer(offset, ONEOCTET))
+    if version == "01" or version == "02" then
+        if remaining < (ONEOCTET + ONEOCTET) then
+            return nil, (ONEOCTET + ONEOCTET) - remaining
+        end
+        local total_len = buffer(offset + ONEOCTET, ONEOCTET):uint()
+        if total_len < 1 then
+            return nil
+        end
+        return total_len
+    end
+
+    return nil
+end
+
+function hep_dissect_one_packet(buffer, pinfo, tree)
+    local buffer_len = buffer:len()
+
     if buffer_len < 1 then
         return
     end
-    
-    offset = 0
-    
-    -- Try to detect HEP3 (requires at least 4 bytes for "HEP3" marker)
+
     if buffer_len >= FOUROCTETS then
-        version = buffer(offset, FOUROCTETS):string()
-        if (version == "HEP3") then
+        local version = buffer(0, FOUROCTETS):string()
+        if version == HEP3_MAGIC then
             hep3_proto_dissector(buffer, pinfo, tree)
             return
         end
     end
 
-    -- Let's try HEP2/HEP1 (requires at least 1 byte for version)
-    version = buffer(offset, ONEOCTET)
-
-    if (tostring(version) == "02") then
+    local version = buffer(0, ONEOCTET)
+    if tostring(version) == "02" then
         hep2_proto_dissector(buffer, pinfo, tree)
-        return
-    elseif (tostring(version) == "01") then
+    elseif tostring(version) == "01" then
         hep1_proto_dissector(buffer, pinfo, tree)
-        return
-    else
-        -- Not HEP3 or HEP2 or HEP1
+    end
+end
+
+function hep_proto.dissector(buffer, pinfo, tree)
+    local buffer_len = buffer:len()
+    local offset = 0
+
+    while offset < buffer_len do
+        local pkt_len, need_more = hep_packet_length_at(buffer, offset)
+        if pkt_len == nil then
+            if need_more then
+                pinfo.desegment_len = need_more
+                pinfo.desegment_offset = offset
+            end
+            return
+        end
+
+        if offset + pkt_len > buffer_len then
+            pinfo.desegment_len = (offset + pkt_len) - buffer_len
+            pinfo.desegment_offset = offset
+            return
+        end
+
+        local pkt_buffer = buffer(offset, pkt_len)
+        hep_dissect_one_packet(pkt_buffer, pinfo, tree)
+        offset = offset + pkt_len
     end
 end
 
@@ -922,9 +982,11 @@ udp_table = DissectorTable.get("udp.port")
 udp_table:add(9060, hep_proto)
 udp_table:add(9063, hep_proto)
 
+-- HEP over TCP (https://github.com/sipcapture/hep-wireshark/issues/8)
 tcp_table = DissectorTable.get("tcp.port")
 tcp_table:add(9060, hep_proto)
 tcp_table:add(9062, hep_proto)
+tcp_table:add(9063, hep_proto)
 
 -- HTTP/HTTP2 support for 5G use cases
 -- Register with HTTP media type for HEP over HTTP/HTTP2
