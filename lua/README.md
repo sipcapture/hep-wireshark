@@ -12,7 +12,7 @@ https://github.com/sipcapture/HEP/blob/master/docs/HEP3_rev12.pdf
 
 The dissector supports HEP over the following transports:
 - **UDP** (ports 9060, 9063)
-- **TCP** (ports 9060, 9062)
+- **TCP** (ports 9060, 9062, 9063)
 - **HTTP** (via media types: `application/hep`, `application/vnd.3gpp.hep`)
 - **HTTP2** (via media types: `application/hep`, `application/vnd.3gpp.hep`)
 
